@@ -4,11 +4,20 @@ import (
 	"time"
 )
 
+const (
+	Standard_IA = "Standard_IA"
+	Nearline = "Nearline"
+	Standard = "Standard"
+	DefaultStandard = Standard_IA
+)
+
+
+
+
 type SrvConf struct {
 	AppId     string
 	SecretId  string
 	SecretKey string
-	Bucket    string
 	Region    string
 }
 
@@ -25,5 +34,5 @@ type Config struct {
 }
 
 func getDefaultHttpTimeOutConfig() *HTTPTimeOut {
-	return &HTTPTimeOut{time.Second * 30, time.Second * 30, time.Second * 60, time.Second * 300}
+	return &HTTPTimeOut{time.Second * 30, time.Second * 30, time.Second * 30, time.Second *35}
 }

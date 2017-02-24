@@ -9,9 +9,10 @@ import (
 type cos struct {
 	config *Config
 	client *http.Client
+	debug bool
 }
 
-func (cos *cos) init(cosConfig Config) {
+func (cos *cos) init(cosConfig *Config, debug bool) {
 	httpTimeOut := cosConfig.HTTPTimeOut
 
 	transport := &http.Transport{
@@ -23,10 +24,12 @@ func (cos *cos) init(cosConfig Config) {
 			return newTimeoutConn(conn, httpTimeOut.ReadWriteTimeout, httpTimeOut.LongTimeout), nil
 		},
 		ResponseHeaderTimeout: httpTimeOut.HeaderTimeout,
+		DisableCompression: true,
 	}
 
 	cos.config = cosConfig
-	cos.client = http.Client{Transport: transport}
+	cos.debug = debug
+	cos.client = &http.Client{Transport: transport}
 }
 
 
@@ -47,7 +50,6 @@ func newTimeoutConn(conn net.Conn, readAndWriteTimeOut time.Duration, longTimeou
 	}
 }
 
-// 读写的时候，第一次先进行正常的读取，下次再设置一个超长时间的???
 func (c *timeoutConn) Read(b []byte) (n int, err error) {
 	c.SetReadDeadline(time.Now().Add(c.timeout))
 	n, err = c.conn.Read(b)

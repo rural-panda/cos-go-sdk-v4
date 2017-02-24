@@ -2,6 +2,8 @@ package cos
 
 // Http头标签
 const (
+	StorageClass = "x-cos-storage-class"
+
 	HTTPHeaderAcceptEncoding     string = "Accept-Encoding"
 	HTTPHeaderAuthorization             = "Authorization"
 	HTTPHeaderCacheControl              = "Cache-Control"
