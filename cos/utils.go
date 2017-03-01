@@ -8,6 +8,9 @@ import (
 	"hash"
 	"fmt"
 	"strings"
+	"crypto/md5"
+	"encoding/xml"
+	"io/ioutil"
 )
 
 func calSha1FromReader(data io.Reader) string {
@@ -16,11 +19,24 @@ func calSha1FromReader(data io.Reader) string {
 	return 	hex.EncodeToString(sha.Sum(nil))
 }
 
+func xmlUnmarshal(body io.Reader, v interface{}) error {
+	data, err := ioutil.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	return xml.Unmarshal(data, v)
+}
 
 func calStrSha1(str string) string {
 	sha := sha1.New()
 	sha.Write([]byte(str))
 	return hex.EncodeToString(sha.Sum(nil))
+}
+
+func calStrMD5(str string) string {
+	_md5 := md5.New()
+	_md5.Write([]byte(str))
+	return hex.EncodeToString(_md5.Sum(nil))
 }
 
 

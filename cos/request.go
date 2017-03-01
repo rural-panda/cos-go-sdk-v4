@@ -24,8 +24,8 @@ const (
 	deleteObject = "deleteObject"
 	simpleUploadObject = "simpleUploadObject"
 	simpleDownloadObject = "simpleDownloadObject"
+	multipleDeleteObject = "multipleDeleteObject"
 )
-
 
 func (conn *cos) do(action, bucketName, objectName string, data io.Reader, standard string) (*Response, error) {
 	var uri, method string
@@ -43,6 +43,9 @@ func (conn *cos) do(action, bucketName, objectName string, data io.Reader, stand
 	} else if action == deleteObject {
 		uri = "/" + objectName
 		method = "DELETE"
+	} else if action == multipleDeleteObject {
+		uri = "/?delete"
+		method = "POST"
 	} else {
 		return nil, fmt.Errorf("%s is not supported", action)
 	}
@@ -84,9 +87,17 @@ func (conn *cos) doRequest(method, action, bucket, object string, _url *url.URL,
 		}
 		req.Header.Del("Transfer-Encoding")
 	}
+	if action == multipleDeleteObject {
+		req.Header.Set("Content-Type", "application/xml")
+		err := addDeleteContentLengthHeader(req, data)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Del("Transfer-Encoding")
 
+	}
 
-	conn.signXMLHeader(req, bucket, object, action)
+	conn.signXMLHeader(req)
 	resp, err := conn.client.Do(req)
 	if err != nil {
 		return nil, errors.New("send request error : " + err.Error())
@@ -102,9 +113,28 @@ func addDeleteObjectHeaderJSON(req *http.Request) {
 	req.Header.Set("Content-Length", strconv.Itoa(len(jsonStr)))
 }
 
+func addDeleteContentLengthHeader(req *http.Request, data io.Reader) error {
+	if buf, ok := data.(*bytes.Buffer); ok {
+		req.ContentLength = int64(buf.Len())
+		req.Header.Set("Content-MD5", calStrMD5(string(buf.Bytes())))
+		req.Body = ioutil.NopCloser(data)
+		return nil
+	} else {
+		dataBytes, err := ioutil.ReadAll(data)
+		if err != nil {
+			return err
+		}
+		req.ContentLength = int64(len(dataBytes))
+		data = bytes.NewBuffer(dataBytes)
+
+		req.Body = ioutil.NopCloser(data)
+		return nil
+	}
+}
 
 // xml-api
 func addContentLengthHeader(req *http.Request, data io.Reader) error {
+
 	dataBytes, err := ioutil.ReadAll(data)
 	if err != nil {
 		return err
@@ -117,7 +147,7 @@ func addContentLengthHeader(req *http.Request, data io.Reader) error {
 }
 
 
- //json api
+//json api
 func addUploadObjectHeaderJSON(req *http.Request, object string, data io.Reader) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -138,7 +168,6 @@ func addUploadObjectHeaderJSON(req *http.Request, object string, data io.Reader)
 	return nil
 }
 
-
 func (conn *cos) handleResponse(resp *http.Response) (*Response, error) {
 	statusCode := resp.StatusCode
 
@@ -148,7 +177,7 @@ func (conn *cos) handleResponse(resp *http.Response) (*Response, error) {
 			Headers:    resp.Header,
 			Body:       resp.Body,
 		}, nil
-	} else{
+	} else {
 		bodyBytes, err := readResponseBody(resp)
 		if err != nil {
 			return nil, err
@@ -171,7 +200,6 @@ func (conn *cos) handleResponse(resp *http.Response) (*Response, error) {
 		}, err
 	}
 }
-
 
 func readResponseBody(resp *http.Response) ([]byte, error) {
 	defer resp.Body.Close()

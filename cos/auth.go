@@ -20,7 +20,7 @@ var (
 )
 
 
-func (conn *cos) signXMLHeader(req *http.Request, bucket, key, action string) string {
+func (conn *cos) signXMLHeader(req *http.Request) string {
 	srvConf := conn.config.SrvConf
 	signedStr := "q-sign-algorithm=sha1&q-ak=" + srvConf.SecretId + "&q-sign-time="
 
@@ -40,7 +40,9 @@ func (conn *cos) signXMLHeader(req *http.Request, bucket, key, action string) st
 	signedStr += "&q-url-param-list=&q-signature="
 
 	sign_key := hmacSha1(srvConf.SecretKey, q_key_time)
-	formatStr := strings.ToLower(req.Method) + "\n" + req.URL.Path + "\n" + url.QueryEscape(req.URL.RawQuery) + "\n"
+	// fixme: 这里需要做 query 部分的拼接
+	formatStr := strings.ToLower(req.Method) + "\n" + req.URL.Path + "\n"  + "\n"
+	//formatStr := strings.ToLower(req.Method) + "\n" + req.URL.Path + "\n" + url.QueryEscape(req.URL.RawQuery) + "\n"
 	for i, v := range sortedKeys {
 		if i > 0 {
 			formatStr += "&"
@@ -49,9 +51,8 @@ func (conn *cos) signXMLHeader(req *http.Request, bucket, key, action string) st
 	}
 	formatStr += "\n"
 
-
-
 	strToSign := "sha1\n" + q_key_time + "\n" + calStrSha1(formatStr) + "\n"
+
 	signatureStr := hmacSha1(sign_key, strToSign)
 	signedStr += signatureStr
 	conn.Println("Authorization: " + signedStr)
